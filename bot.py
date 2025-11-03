@@ -62,7 +62,7 @@ async def quiz(message):
         await message.send(f"❌ You got the wrong answer {message.author.mention} ! ")
         await message.send(f"Here is the fun fact about it : {facts[i]["fact"]} ")
 @bot.command()
-async def update_roles(ctx):
+async def update_database(ctx):
     db = client.users
     collection = db.users
     async for member in ctx.guild.fetch_members(limit = None):
@@ -73,7 +73,7 @@ async def update_roles(ctx):
                 if role not in roles:
                     collection.update_one({"user_id" : member.id} , {"$pull" : {"roles" : role}})
             for role in roles :
-                if role not in user.roles:
+                if role not in user["roles"]:
                     collection.update_one({"user_id" : member.id} , {"$push" : {"roles" : role}})
         else:
             tasks = []
@@ -85,5 +85,30 @@ async def update_roles(ctx):
             }
             collection.insert_one(document)
     await ctx.send(f"{ctx.author.mention} The Database has been updated successfully ! ")
+@bot.command()
+async def assign_task(ctx , role : str , *, task):
+    db = client.users
+    collection = db.users
+    _role = discord.utils.get(ctx.guild.roles , name = role)
+    await update_database(ctx)
+    async for member in ctx.guild.fetch_members(limit = None):
+        roles = [role1.name for role1 in member.roles]
+        if role in roles :
+            user = collection.find_one({"user_id" : member.id})
+            collection.update_one({"user_id" : member.id} , {"$push" : {"tasks" : task}})
+            print("assigning was successful")
+    await ctx.send(f"{_role.mention} , you have been assigned this task : {task}")
+
+
+@bot.command()
+async def mytasks(ctx):
+    db = client.users
+    collection = db.users
+    user = collection.find_one({"user_id" : ctx.author.id})
+    i = 1 
+    await ctx.send(f"{ctx.author.mention} you have the following tasks : ")
+    for task in user["tasks"]:
+        await ctx.send(f"{i} : {task} ")
+        i = i + 1
 
 bot.run(TOKEN)
