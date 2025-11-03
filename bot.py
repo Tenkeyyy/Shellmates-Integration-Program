@@ -5,8 +5,8 @@ from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
 uri = os.getenv('URI')
+TOKEN = os.getenv('DISCORD_TOKEN')
 client = MongoClient(uri)
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
