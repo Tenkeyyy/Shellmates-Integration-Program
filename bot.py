@@ -61,5 +61,29 @@ async def quiz(message):
     else:
         await message.send(f"❌ You got the wrong answer {message.author.mention} ! ")
         await message.send(f"Here is the fun fact about it : {facts[i]["fact"]} ")
+@bot.command()
+async def update_roles(ctx):
+    db = client.users
+    collection = db.users
+    async for member in ctx.guild.fetch_members(limit = None):
+        user = collection.find_one({"user_id" : member.id})
+        roles = [role.name for role in member.roles]
+        if user:
+            for role in user["roles"]:
+                if role not in roles:
+                    collection.update_one({"user_id" : member.id} , {"$pull" : {"roles" : role}})
+            for role in roles :
+                if role not in user.roles:
+                    collection.update_one({"user_id" : member.id} , {"$push" : {"roles" : role}})
+        else:
+            tasks = []
+            document = {
+                "user_id" : member.id ,
+                "name" : member.name ,
+                "roles" : roles , 
+                "tasks" : tasks
+            }
+            collection.insert_one(document)
+    await ctx.send(f"{ctx.author.mention} The Database has been updated successfully ! ")
 
 bot.run(TOKEN)
