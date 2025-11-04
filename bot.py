@@ -106,9 +106,9 @@ async def mytasks(ctx):
     collection = db.users
     user = collection.find_one({"user_id" : ctx.author.id})
     i = 1 
-    await ctx.send(f"{ctx.author.mention} you have the following tasks : ")
+    await ctx.author.send(f"{ctx.author.mention} you have the following tasks : ")
     for task in user["tasks"]:
-        await ctx.send(f"{i} : {task} ")
+        await ctx.author.send(f"{i} : {task} ")
         i = i + 1
 @bot.command()
 async def deletetask(ctx , user : discord.User , *, task ):
@@ -116,8 +116,8 @@ async def deletetask(ctx , user : discord.User , *, task ):
     collection = db.users
     _user = collection.find_one({"user_id" : user.id})
     if task not in _user["tasks"]:
-        await ctx.send(f"{ctx.author.mention} , The task doesn't exist ! ")
+        await ctx.author.send(f"{ctx.author.mention} , The task doesn't exist ! ")
     else:
         collection.update_one({"user_id" : user.id}, {"$pull" : {"tasks" : task}})
-        await ctx.send("Task deleted successfully !")
+        await ctx.author.send("Task deleted successfully !")
 bot.run(TOKEN)
