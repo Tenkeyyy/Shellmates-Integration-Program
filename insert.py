@@ -33,6 +33,23 @@ def insert_event(name , year , month , day , details):
         "details" : details
     }
     collection.insert_one(document)
+def inserttip(title , details):
+    db = client.tips 
+    collection = db.tips
+    document = {
+        "title" : title ,
+        "details" : details 
+    }
+    collection.insert_one(document)
+def insertterm(term , definition):
+    db = client.terms 
+    collection = db.terms
+    document = {
+        "term" : term ,
+        "definition" : definition 
+    }
+    collection.insert_one(document)
+
 i = input("What do u wanna do ? 0 for inserting events , 1 for inserting facts ")
 if(i == 0):
     while True : 

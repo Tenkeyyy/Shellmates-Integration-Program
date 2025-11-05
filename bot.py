@@ -6,11 +6,13 @@ import os
 from dotenv import load_dotenv
 from datetime import date
 load_dotenv()
+
 uri = os.getenv('URI')
 TOKEN = os.getenv('DISCORD_TOKEN')
 client = MongoClient(uri)
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
+
 
 @bot.event
 async def on_ready():
@@ -18,10 +20,6 @@ async def on_ready():
 @bot.command()
 async def hello(message):
     await message.channel.send(f"Hello {message.author.mention} !")
-@bot.command()
-async def dbs(message):
-    dbs = client.list_database_names()
-    await message.channel.send(f"Here is the names of your database : {dbs}")
 @bot.command()
 async def fact(message):
     db = client.facts
@@ -86,6 +84,8 @@ async def update_database(ctx):
             }
             collection.insert_one(document)
     await ctx.send(f"{ctx.author.mention} The Database has been updated successfully ! ")
+
+
 @bot.command()
 async def assign_task(ctx , role : str , *, task):
     db = client.users
@@ -111,6 +111,8 @@ async def mytasks(ctx):
     for task in user["tasks"]:
         await ctx.author.send(f"{i} : {task} ")
         i = i + 1
+
+
 @bot.command()
 async def deletetask(ctx , user : discord.User , *, task ):
     db = client.users
@@ -121,18 +123,24 @@ async def deletetask(ctx , user : discord.User , *, task ):
     else:
         collection.update_one({"user_id" : user.id}, {"$pull" : {"tasks" : task}})
         await ctx.author.send("Task deleted successfully !")
+
+
 @bot.command()
 async def tip(ctx):
     db = client.tips 
     collection = db.tips 
     tip = collection.aggregate([{"$sample": {"size": 1}}]).next()
     await ctx.send(f"{ctx.author.mention} , Here is your tip , {tip["title"]} : {tip["details"]}")
+
+
 @bot.command()
 async def cyberterm(ctx):
     db = client.terms 
     collection = db.terms 
     term = collection.aggregate([{"$sample": {"size": 1}}]).next()
     await ctx.send(f"{ctx.author.mention} , Here is your term : {term["term"]} . The definition : {term["definition"]}")
+
+
 @bot.command()
 async def onthisday(ctx):
     db = client.cyber_history 
@@ -144,4 +152,7 @@ async def onthisday(ctx):
         await ctx.send(f"{ctx.author.mention} , On this day {fact["info"]}")
     else :
         await ctx.send("Nothing happened on this day !")
+
+
+        
 bot.run(TOKEN)
