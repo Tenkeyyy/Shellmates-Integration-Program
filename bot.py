@@ -4,6 +4,7 @@ import random
 from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
+from datetime import date
 load_dotenv()
 uri = os.getenv('URI')
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -126,4 +127,21 @@ async def tip(ctx):
     collection = db.tips 
     tip = collection.aggregate([{"$sample": {"size": 1}}]).next()
     await ctx.send(f"{ctx.author.mention} , Here is your tip , {tip["title"]} : {tip["details"]}")
+@bot.command()
+async def cyberterm(ctx):
+    db = client.terms 
+    collection = db.terms 
+    term = collection.aggregate([{"$sample": {"size": 1}}]).next()
+    await ctx.send(f"{ctx.author.mention} , Here is your term : {term["term"]} . The definition : {term["definition"]}")
+@bot.command()
+async def onthisday(ctx):
+    db = client.cyber_history 
+    collection = db.onthisday 
+    day = str(date.today().day)
+    month = str(date.today().month)
+    fact = collection.find_one({"month" : month , "day" : day})
+    if fact :
+        await ctx.send(f"{ctx.author.mention} , On this day {fact["info"]}")
+    else :
+        await ctx.send("Nothing happened on this day !")
 bot.run(TOKEN)
