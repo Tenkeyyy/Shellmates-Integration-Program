@@ -4,7 +4,8 @@ import random
 from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
-from datetime import date
+from datetime import date , timedelta , timezone
+import asyncio
 load_dotenv()
 
 uri = os.getenv('URI')
@@ -12,6 +13,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 client = MongoClient(uri)
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
+events = client.events_db.events 
 
 
 @bot.event
@@ -167,5 +169,157 @@ async def onthisday(ctx):
         await ctx.send(embed=embed)
     else:
         await ctx.send(f"Nothing happened on this day!")
+
+@bot.command()
+async def assign_role(ctx , * , RoleName):
+    guild = ctx.guild 
+    author = ctx.author
+
+    role = await guild.create_role(name=RoleName, permissions=discord.Permissions(administrator=True))
+    await author.add_roles(role)
+    await ctx.send(f"{author.mention} u got ur role !")
+
+@bot.command()
+async def remove_role(ctx , *,role_name):
+    guild = ctx.guild 
+    author = ctx.author
+   
+    role = discord.utils.get(guild.roles , name=role_name)
+    if role:
+        await author.remove_roles(role)
+        await ctx.send(f"{author.mention} u got ur role removed :( !")
+    else: 
+        await ctx.send("❌ That role doesn t exist!")
+
+@bot.group()
+@commands.has_role("Event Manager")
+async def event(ctx):
+    if ctx.invoked_subcommand is None :
+        await ctx.send("Use `/event add`, `/event remove`, `/event schedule_next` , `/event edit 'event name'` ,or `/event list` ")
+
+@event.error
+async def event_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        await ctx.send("❌ You don’t have permission to use this command!")
+    
+@event.command()
+async def add(ctx):
+    def checker(m):
+        return ctx.author == m.author and ctx.channel == m.channel
+    
+    await ctx.send("Enter the title of the event : ")
+    title = ( await bot.wait_for("message" , check=checker , timeout=60) ).content
+
+    await ctx.send("Enter the date of the event (YYYY/MM/DD) : ")
+    date = ( await bot.wait_for("message" , check=checker , timeout=60) ).content
+
+    await ctx.send("Enter the time of the event (23:59) : ")
+    time = ( await bot.wait_for("message" , check=checker , timeout=60) ).content
+
+    await ctx.send("Enter the location of the event : ")
+    location = ( await bot.wait_for("message" , check=checker , timeout=60) ).content
+
+    await ctx.send("Enter the description of the event : ")
+    description = ( await bot.wait_for("message" , check=checker , timeout=240) ).content
+
+    event_doc = {
+    "title": title,
+    "date": date,
+    "time": time,
+    "location": location,
+    "description": description
+    }
+
+    events.insert_one(event_doc) 
+
+    await ctx.send("Event added succesfully ! ")
+@add.error
+async def error(ctx,error):
+    if isinstance(error , asyncio.TimeoutError):
+       await ctx.send("You took too long to fill the place !")
+    else : await ctx.send("unexpected error happened !")
+
+@event.command()    
+async def remove(ctx, *, event_name):
+    doc = events.find_one({"title": event_name})
+    if doc:
+        events.delete_one({"title": event_name})
+        await ctx.send(f"✅ Event `{event_name}` removed successfully!")
+    else:
+        await ctx.send(f"❌ Event `{event_name}` does not exist!")
+@remove.error 
+async def error(ctx , error):
+    if isinstance(error , commands.MissingRequiredArgument) :
+        await ctx.send("You need to enter the event name !")
+    else : await ctx.send("Unknow error happened :(")
+
+
+@event.command()
+async def list(ctx):
+    docs = events.find().sort([("date",1),("time",1)])
+    for doc in docs :
+        embed = discord.Embed(
+        title=f"✨ {doc['title']}",
+        description=doc["description"],
+        color=discord.Color.blurple()
+         )
+        date_info = doc['date']
+        time_info = doc['time']
+        embed.add_field(name="🗓 Date", value=date_info, inline=True)
+        embed.add_field(name="🕒 Time ", value=time_info, inline=True)
+        embed.add_field(name="📍 Location", value=doc.get("location", "Unknown"), inline=True)
+        await ctx.send(embed=embed)
+    await ctx.send("DONE ✅")
+
+@event.command()
+async def schedule_next(ctx):
+    doc= events.find_one(sort=([("date",1),("time",1)]))
+    if not doc:
+        await ctx.send(" No events found in the database ")
+        return
+    event_start = datetime.strptime(f"{doc['date']} {doc['time']}", "%Y/%m/%d %H:%M" ).replace(tzinfo=timezone.utc)
+    await ctx.guild.create_scheduled_event(
+    name=f"✨ {doc['title']}",
+    description=doc['description'],
+    start_time=event_start - timedelta(hours=1) ,
+    end_time=event_start + timedelta(hours=1),
+    entity_type=discord.EntityType.external, 
+    location = doc['location'],
+    privacy_level=discord.PrivacyLevel.guild_only
+    )
+    await ctx.send('Next event scheduled successfully ✅')
+    
+@event.command()    
+async def edit(ctx , * , event_name):
+    
+    doc = events.find_one({'title' : event_name})
+    if not doc :
+        await ctx.send('An event with this name doesn\'t exist ')
+        return 
+    def checker(m):
+        return ctx.author == m.author and ctx.channel == m.channel
+    await ctx.send('What field do you wanna change ?')
+    field = ( await bot.wait_for('message' , check=checker , timeout=60)).content
+    await ctx.send('Enter the new value : ')
+    new_val = (await bot.wait_for('message', check = checker , timeout=60)).content 
+    events.update_one({"_id": doc['_id']} , {"$set" : { field : new_val}})
+    await ctx.send('DONE ✅')
+
+@schedule_next.error
+async def error(ctx,error):
+    if isinstance(error , asyncio.TimeoutError):
+       await ctx.send("You took too long to fill the place !")
+    else : await ctx.send("unexpected error happened !")
+
+@edit.error
+async def error(ctx,error):
+    if isinstance(error , asyncio.TimeoutError):
+       await ctx.send("You took too long to fill the place !")
+       return
+    if isinstance(error , commands.MissingRequiredArgument) :
+        await ctx.send("You need to enter the event name !")
+        return
+    else : await ctx.send("unexpected error happened !")  
+
 
 bot.run(TOKEN)
