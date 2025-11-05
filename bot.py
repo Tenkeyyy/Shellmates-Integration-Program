@@ -120,4 +120,10 @@ async def deletetask(ctx , user : discord.User , *, task ):
     else:
         collection.update_one({"user_id" : user.id}, {"$pull" : {"tasks" : task}})
         await ctx.author.send("Task deleted successfully !")
+@bot.command()
+async def tip(ctx):
+    db = client.tips 
+    collection = db.tips 
+    tip = collection.aggregate([{"$sample": {"size": 1}}]).next()
+    await ctx.send(f"{ctx.author.mention} , Here is your tip , {tip["title"]} : {tip["details"]}")
 bot.run(TOKEN)
