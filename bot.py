@@ -26,40 +26,51 @@ async def fact(message):
     collections = db.list_collection_names()
     collection = db[random.choice(collections)]
     fact = collection.aggregate([{"$sample": {"size": 1}}]).next()
-    await message.channel.send(f"Here is your fun fact {message.author.mention} : {fact["name"]} : {fact["fact"]} ")
+    embed = discord.Embed(
+        title=f"💡 {fact['name']}",
+        description=fact["fact"],
+        color=discord.Color.green()
+    )
+    await message.send(embed=embed)
 @bot.command()
-async def quiz(message):
+async def quiz(ctx):
     db = client.facts
     collection = db[random.choice(db.list_collection_names())]
     fact1 = collection.aggregate([{"$sample": {"size": 1}}]).next()
     fact2 = collection.aggregate([{"$sample": {"size": 1}}]).next()
     fact3 = collection.aggregate([{"$sample": {"size": 1}}]).next()
-    while(fact2 == fact1):
+    while fact2 == fact1:
         fact2 = collection.aggregate([{"$sample": {"size": 1}}]).next()
-    while(fact3 == fact2 or fact3 == fact1):
+    while fact3 == fact2 or fact3 == fact1:
         fact3 = collection.aggregate([{"$sample": {"size": 1}}]).next()
-    factss = [fact1["name"] , fact2["name"] , fact3["name"]]
-    facts = [fact1 , fact2 , fact3]
-    i = random.randint(0,2)
+    factss = [fact1["name"], fact2["name"], fact3["name"]]
+    facts = [fact1, fact2, fact3]
+    i = random.randint(0, 2)
+    answer = ["🇦", "🇧", "🇨"][i]
     question = facts[i]["question"]
-    if i == 0:
-        answer = "🇦"
-    elif i == 1 :
-        answer = "🇧"
-    else :
-        answer = "🇨"
-    messages = await message.send(f"🧠 **{question}**\n" + "\n".join(factss))
-    for emoji in ["🇦", "🇧", "🇨"] :
-        await messages.add_reaction(emoji)
-    def check(reaction , user):
-        return user != bot.user and reaction.message.id == messages.id and str(reaction.emoji) in ["🇦" , "🇧" , "🇨"]
-    reaction , user = await bot.wait_for("reaction_add" , check = check)
-    if reaction.emoji == answer:
-        await message.send(f"✅ Well done {message.author.mention} ! You got it right !!")
-        await message.send(f"Here is the fun fact about it : {facts[i]["fact"]} ")
-    else:
-        await message.send(f"❌ You got the wrong answer {message.author.mention} ! ")
-        await message.send(f"Here is the fun fact about it : {facts[i]["fact"]} ")
+    description_text = f"**{question}**\n\n" \
+                        f"🇦\u00A0\u00A0\u00A0{factss[0]}\n\n" \
+                        f"🇧\u00A0\u00A0\u00A0{factss[1]}\n\n" \
+                        f"🇨\u00A0\u00A0\u00A0{factss[2]}"
+
+    embed = discord.Embed(
+        title="🧠 Quiz Time!",
+        description=description_text,
+        color=discord.Color.blurple()
+    )
+    quiz_message = await ctx.send(embed=embed)
+    for emoji in ["🇦", "🇧", "🇨"]:
+        await quiz_message.add_reaction(emoji)
+    def check(reaction, user):
+        return user != bot.user and reaction.message.id == quiz_message.id and str(reaction.emoji) in [" 🇦", "🇧", "🇨"]
+    reaction, user = await bot.wait_for("reaction_add", check=check)
+    result_embed = discord.Embed(
+        color=discord.Color.green() if reaction.emoji == answer else discord.Color.red()
+    )
+    result_embed.title = "✅ Correct!" if reaction.emoji == answer else "❌ Wrong!"
+    result_embed.description = f"The correct answer was **{answer} {factss[i]}**\n\nFun fact: {facts[i]['fact']}"
+
+    await ctx.send(embed=result_embed)
 @bot.command()
 async def update_database(ctx):
     db = client.users
@@ -84,8 +95,6 @@ async def update_database(ctx):
             }
             collection.insert_one(document)
     await ctx.send(f"{ctx.author.mention} The Database has been updated successfully ! ")
-
-
 @bot.command()
 async def assign_task(ctx , role : str , *, task):
     db = client.users
@@ -99,8 +108,6 @@ async def assign_task(ctx , role : str , *, task):
             collection.update_one({"user_id" : member.id} , {"$push" : {"tasks" : task}})
             print("assigning was successful")
     await ctx.send(f"{_role.mention} , you have been assigned this task : {task}")
-
-
 @bot.command()
 async def mytasks(ctx):
     db = client.users
@@ -111,8 +118,6 @@ async def mytasks(ctx):
     for task in user["tasks"]:
         await ctx.author.send(f"{i} : {task} ")
         i = i + 1
-
-
 @bot.command()
 async def deletetask(ctx , user : discord.User , *, task ):
     db = client.users
@@ -124,35 +129,43 @@ async def deletetask(ctx , user : discord.User , *, task ):
         collection.update_one({"user_id" : user.id}, {"$pull" : {"tasks" : task}})
         await ctx.author.send("Task deleted successfully !")
 
-
 @bot.command()
 async def tip(ctx):
     db = client.tips 
     collection = db.tips 
     tip = collection.aggregate([{"$sample": {"size": 1}}]).next()
-    await ctx.send(f"{ctx.author.mention} , Here is your tip , {tip["title"]} : {tip["details"]}")
-
-
+    embed = discord.Embed(
+        title=f"💡 {tip['title']}",
+        description=tip['details'],
+        color=discord.Color.yellow()
+    )
+    await ctx.send(embed=embed)
 @bot.command()
 async def cyberterm(ctx):
     db = client.terms 
     collection = db.terms 
     term = collection.aggregate([{"$sample": {"size": 1}}]).next()
-    await ctx.send(f"{ctx.author.mention} , Here is your term : {term["term"]} . The definition : {term["definition"]}")
-
-
+    embed = discord.Embed(
+        title=f"🕵️‍♂️ {term['term']}",
+        description=term['definition'],
+        color=discord.Color.dark_grey()
+    )
+    await ctx.send(embed=embed)
 @bot.command()
 async def onthisday(ctx):
     db = client.cyber_history 
     collection = db.onthisday 
     day = str(date.today().day)
     month = str(date.today().month)
-    fact = collection.find_one({"month" : month , "day" : day})
-    if fact :
-        await ctx.send(f"{ctx.author.mention} , On this day {fact["info"]}")
-    else :
-        await ctx.send("Nothing happened on this day !")
+    fact = collection.find_one({"month": month, "day": day})
+    if fact:
+        embed = discord.Embed(
+            title=f"⏳ On This Day",
+            description=fact["info"],
+            color=discord.Color.orange()
+        )
+        await ctx.send(embed=embed)
+    else:
+        await ctx.send(f"Nothing happened on this day!")
 
-
-        
 bot.run(TOKEN)
