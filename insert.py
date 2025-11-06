@@ -1,8 +1,10 @@
 from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
+
+
 load_dotenv()
-uri = os.getenv('URI')
+uri = os.getenv('XXX')
 client = MongoClient(uri)
 def insert_fact_hackers(name , question , fact):
     db = client.facts 

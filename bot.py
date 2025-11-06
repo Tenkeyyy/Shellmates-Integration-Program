@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 from datetime import date
 load_dotenv()
 
-uri = os.getenv('URI')
-TOKEN = os.getenv('DISCORD_TOKEN')
+uri = os.getenv('XXX')
+TOKEN = 'XXX'
 client = MongoClient(uri)
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
@@ -71,6 +71,9 @@ async def quiz(ctx):
     result_embed.description = f"The correct answer was **{answer} {factss[i]}**\n\nFun fact: {facts[i]['fact']}"
 
     await ctx.send(embed=result_embed)
+
+
+
 @bot.command()
 async def update_database(ctx):
     db = client.users
@@ -95,6 +98,9 @@ async def update_database(ctx):
             }
             collection.insert_one(document)
     await ctx.send(f"{ctx.author.mention} The Database has been updated successfully ! ")
+
+
+
 @bot.command()
 async def assign_task(ctx , role : str , *, task):
     db = client.users
@@ -108,6 +114,9 @@ async def assign_task(ctx , role : str , *, task):
             collection.update_one({"user_id" : member.id} , {"$push" : {"tasks" : task}})
             print("assigning was successful")
     await ctx.send(f"{_role.mention} , you have been assigned this task : {task}")
+
+
+
 @bot.command()
 async def mytasks(ctx):
     db = client.users
@@ -118,6 +127,10 @@ async def mytasks(ctx):
     for task in user["tasks"]:
         await ctx.author.send(f"{i} : {task} ")
         i = i + 1
+
+
+
+
 @bot.command()
 async def deletetask(ctx , user : discord.User , *, task ):
     db = client.users
@@ -128,6 +141,9 @@ async def deletetask(ctx , user : discord.User , *, task ):
     else:
         collection.update_one({"user_id" : user.id}, {"$pull" : {"tasks" : task}})
         await ctx.author.send("Task deleted successfully !")
+
+
+
 
 @bot.command()
 async def tip(ctx):
@@ -140,6 +156,10 @@ async def tip(ctx):
         color=discord.Color.yellow()
     )
     await ctx.send(embed=embed)
+
+
+
+
 @bot.command()
 async def cyberterm(ctx):
     db = client.terms 
@@ -151,6 +171,9 @@ async def cyberterm(ctx):
         color=discord.Color.dark_grey()
     )
     await ctx.send(embed=embed)
+
+
+
 @bot.command()
 async def onthisday(ctx):
     db = client.cyber_history 
@@ -167,5 +190,55 @@ async def onthisday(ctx):
         await ctx.send(embed=embed)
     else:
         await ctx.send(f"Nothing happened on this day!")
+
+
+def insert_task(username, task, status, deadline):
+    db = client.users       # Use the 'users' DB
+    collection = db.tasks   # Create/use the 'tasks' collection
+    document = {
+        "username": username,
+        "task": task,
+        "status": status,
+        "deadline": deadline
+    }
+    collection.insert_one(document)
+
+
+
+
+
+
+
+def get_user_tasks(username):
+    db = client.users
+    collection = db.tasks
+    tasks = collection.find({"username": username})
+    result = []
+    for task in tasks:
+        result.append({
+            "task": task["task"],
+            "status": task["status"],
+            "deadline": task["deadline"]
+        })
+    return result
+
+
+@bot.command()
+async def tasks(ctx, *, username):
+    db = client.users
+    collection = db.users
+    
+    # Look for the user by username
+    user = collection.find_one({"name": username})
+    if not user or "tasks" not in user or len(user["tasks"]) == 0:
+        await ctx.send(f"No tasks found for {username}.")
+        return
+    
+    msg = f"Tasks for {username}:\n"
+    for i, t in enumerate(user["tasks"], 1):
+        msg += f"{i}. {t}\n"
+    
+    await ctx.send(msg)
+
 
 bot.run(TOKEN)
