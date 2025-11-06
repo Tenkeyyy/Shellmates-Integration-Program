@@ -74,6 +74,7 @@ async def quiz(ctx):
 
     await ctx.send(embed=result_embed)
 @bot.command()
+@commands.has_role("Members")
 async def update_database(ctx):
     db = client.users
     collection = db.users
@@ -97,7 +98,14 @@ async def update_database(ctx):
             }
             collection.insert_one(document)
     await ctx.send(f"{ctx.author.mention} The Database has been updated successfully ! ")
+@update_database.error
+async def event_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        await ctx.send("❌ You don’t have permission to use this command!")
+
+
 @bot.command()
+@commands.has_role("Members")
 async def assign_task(ctx , role : str , *, task):
     db = client.users
     collection = db.users
@@ -108,8 +116,13 @@ async def assign_task(ctx , role : str , *, task):
         if role in roles :
             user = collection.find_one({"user_id" : member.id})
             collection.update_one({"user_id" : member.id} , {"$push" : {"tasks" : task}})
-            print("assigning was successful")
     await ctx.send(f"{_role.mention} , you have been assigned this task : {task}")
+@assign_task.error
+async def event_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        await ctx.send("❌ You don’t have permission to use this command!")
+
+
 @bot.command()
 async def mytasks(ctx):
     db = client.users
@@ -120,7 +133,10 @@ async def mytasks(ctx):
     for task in user["tasks"]:
         await ctx.author.send(f"{i} : {task} ")
         i = i + 1
+
+
 @bot.command()
+@commands.has_role("Members")
 async def deletetask(ctx , user : discord.User , *, task ):
     db = client.users
     collection = db.users
@@ -129,7 +145,11 @@ async def deletetask(ctx , user : discord.User , *, task ):
         await ctx.author.send(f"{ctx.author.mention} , The task doesn't exist ! ")
     else:
         collection.update_one({"user_id" : user.id}, {"$pull" : {"tasks" : task}})
-        await ctx.author.send("Task deleted successfully !")
+        await user.send(f"Task : {task} , has been removed from your tasks !!")
+@deletetask.error
+async def event_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        await ctx.send("❌ You don’t have permission to use this command!")
 
 @bot.command()
 async def tip(ctx):
@@ -171,6 +191,7 @@ async def onthisday(ctx):
         await ctx.send(f"Nothing happened on this day!")
 
 @bot.command()
+@commands.has_role("Members")
 async def assign_role(ctx , * , RoleName):
     guild = ctx.guild 
     author = ctx.author
@@ -178,8 +199,14 @@ async def assign_role(ctx , * , RoleName):
     role = await guild.create_role(name=RoleName, permissions=discord.Permissions(administrator=True))
     await author.add_roles(role)
     await ctx.send(f"{author.mention} u got ur role !")
+@assign_role.error
+async def event_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        await ctx.send("❌ You don’t have permission to use this command!")
+
 
 @bot.command()
+@commands.has_role("Members")
 async def remove_role(ctx , *,role_name):
     guild = ctx.guild 
     author = ctx.author
@@ -190,6 +217,10 @@ async def remove_role(ctx , *,role_name):
         await ctx.send(f"{author.mention} u got ur role removed :( !")
     else: 
         await ctx.send("❌ That role doesn t exist!")
+@remove_role.error
+async def event_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        await ctx.send("❌ You don’t have permission to use this command!")
 
 @bot.group()
 @commands.has_role("Event Manager")
@@ -269,7 +300,6 @@ async def list(ctx):
         embed.add_field(name="🕒 Time ", value=time_info, inline=True)
         embed.add_field(name="📍 Location", value=doc.get("location", "Unknown"), inline=True)
         await ctx.send(embed=embed)
-    await ctx.send("DONE ✅")
 
 @event.command()
 async def schedule_next(ctx):
