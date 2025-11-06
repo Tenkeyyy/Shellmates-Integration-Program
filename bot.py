@@ -352,4 +352,26 @@ async def error(ctx,error):
     else : await ctx.send("unexpected error happened !")  
 
 
+@bot.command()
+@commands.has_role("Members")
+async def tasks(ctx, *, username):
+    db = client.users
+    collection = db.users
+    
+    # Look for the user by username
+    user = collection.find_one({"name": username})
+    if not user or "tasks" not in user or len(user["tasks"]) == 0:
+        await ctx.send(f"No tasks found for {username}.")
+        return
+    
+    msg = f"Tasks for {username}:\n"
+    for i, t in enumerate(user["tasks"], 1):
+        msg += f"{i}. {t}\n"
+    
+    await ctx.author.send(msg)
+@tasks.error
+async def event_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        await ctx.send("❌ You don’t have permission to use this command!")
+
 bot.run(TOKEN)
