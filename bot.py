@@ -307,12 +307,13 @@ async def schedule_next(ctx):
     if not doc:
         await ctx.send(" No events found in the database ")
         return
-    event_start = datetime.strptime(f"{doc['date']} {doc['time']}", "%Y/%m/%d %H:%M" ).replace(tzinfo=timezone.utc)
+    event_start = datetime.strptime(f"{doc['date']} {doc['time']}", "%Y/%m/%d %H:%M" )
+    event_start = event_start.replace(tzinfo=timezone.utc)
     await ctx.guild.create_scheduled_event(
     name=f"✨ {doc['title']}",
     description=doc['description'],
-    start_time=event_start - timedelta(hours=1) ,
-    end_time=event_start + timedelta(hours=1),
+    start_time=event_start ,
+    end_time=event_start + timedelta(hours=2),
     entity_type=discord.EntityType.external, 
     location = doc['location'],
     privacy_level=discord.PrivacyLevel.guild_only
