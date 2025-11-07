@@ -4,7 +4,7 @@ import random
 from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
-from datetime import date , timedelta , timezone
+from datetime import date , timedelta , timezone , datetime
 import asyncio
 load_dotenv()
 
@@ -319,7 +319,7 @@ async def schedule_next(ctx):
     )
     await ctx.send('Next event scheduled successfully ✅')
     
-@event.command()    
+@event.command()        
 async def edit(ctx , * , event_name):
     
     doc = events.find_one({'title' : event_name})
